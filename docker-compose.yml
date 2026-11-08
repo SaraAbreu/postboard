@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postboard
+      POSTGRES_PASSWORD: postboard
+      POSTGRES_DB: postboard
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Ejecuta la migración la primera vez que se crea la base de datos.
+      # (Día 6: sustitúyelo por golang-migrate.)
+      - ./api/migrations/000001_create_posts.up.sql:/docker-entrypoint-initdb.d/001.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postboard"]
+      interval: 3s
+      retries: 10
+
+  api:
+    build: ./api
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://postboard:postboard@db:5432/postboard?sslmode=disable
+      CORS_ORIGIN: http://localhost:5173
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Día 11: añade aquí el servicio "web" con el frontend de React.
+
+volumes:
+  pgdata:
